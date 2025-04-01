@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline Python Tutor Chat</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f0f2f5;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            display: flex;
+            height: 100vh;
+            /* Make it fullscreen */
+            width: 100%;
+            margin: 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            background: white;
+        }
+
+        .history-panel {
+            width: 25%;
+            border-right: 1px solid #ccc;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f5f7fa;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .chat-panel {
+            width: 75%;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 5px;
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background: #e3f2fd;
+            text-align: right;
+            margin-left: auto;
+            border: 1px solid #bbdefb;
+        }
+
+        .assistant-message {
+            background: #fff;
+            border: 1px solid #eee;
+            margin-right: auto;
+        }
+
+        /* Improved code blocks */
+        .assistant-message pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            /* Preserve whitespace but allow wrapping */
+        }
+
+        /* Improved inline code */
+        .assistant-message code {
+            background: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #e0e0e0;
+            font-size: 90%;
+            color: #e83e8c;
+        }
+
+        /* Improved text formatting */
+        .assistant-message strong {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .assistant-message em {
+            font-style: italic;
+            color: #555;
+        }
+
+        .assistant-message br {
+            display: block;
+            margin: 5px 0;
+            content: "";
+        }
+
+        .input-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 150px;
+        }
+
+        textarea {
+            width: calc(100% - 22px);
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: none;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            font-size: 16px;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background: #0056b3;
+        }
+
+        .suggestion {
+            padding: 10px;
+            margin: 8px 0;
+            background: #f0f0f0;
+            border-radius: 5px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.9em;
+            transition: background 0.2s;
+        }
+
+        .suggestion:hover {
+            background: #e0e0e0;
+        }
+
+        h3 {
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+            font-size: 18px;
+        }
+
+        .panel-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .clear-button {
+            font-size: 0.8em;
+            padding: 4px 8px;
+            background: #f44336;
+        }
+
+        .loading-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .loading-dots {
+            display: flex;
+        }
+
+        .loading-dots span {
+            width: 8px;
+            height: 8px;
+            margin: 0 2px;
+            background: #007bff;
+            border-radius: 50%;
+            animation: dot-pulse 1.5s infinite;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes dot-pulse {
+
+            0%,
+            100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        .status-bar {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        /* Additional CSS for better markdown display */
+        .assistant-message h3 {
+            font-size: 1.4em;
+            color: #2c3e50;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .assistant-message h4 {
+            font-size: 1.2em;
+            color: #34495e;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+
+        .assistant-message h5 {
+            font-size: 1.1em;
+            color: #3d3d3d;
+            margin-top: 12px;
+            margin-bottom: 6px;
+        }
+
+        .assistant-message ul,
+        .assistant-message ol {
+            padding-left: 25px;
+            margin: 10px 0;
+        }
+
+        .assistant-message li {
+            margin: 5px 0;
+        }
+
+        .assistant-message pre.code-block {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .assistant-message code {
+            background-color: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 90%;
+            color: #d63384;
+        }
+
+        .assistant-message p {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+
+        /* Fix for proper list display */
+        .assistant-message ul {
+            list-style-type: disc;
+        }
+
+        .assistant-message ol {
+            list-style-type: decimal;
+        }
+
+        /* Fix for code blocks */
+        .assistant-message pre code {
+            background-color: transparent;
+            padding: 0;
+            border: none;
+            color: #333;
+            display: block;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .chat-container {
+                flex-direction: column;
+                height: 100vh;
+                width: 100%;
+            }
+
+            .history-panel,
+            .chat-panel {
+                width: 100%;
+                padding: 10px;
+                height: auto;
+            }
+
+            .history-panel {
+                border-right: none;
+                border-bottom: 1px solid #ccc;
+                max-height: 200px;
+            }
+
+            .messages {
+                max-height: calc(100vh - 400px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="history-panel">
+            <div class="panel-title">
+                <h3>Prompt History</h3>
+                <button id="clear-history" class="clear-button" title="Clear history">Clear</button>
+            </div>
+            <div id="history-list"></div>
+            <h3>Suggested Prompts</h3>
+            <div id="suggestions-list"></div>
+        </div>
+        <div class="chat-panel">
+            <div class="messages" id="messages"></div>
+            <div id="error-container"></div>
+            <div class="input-area">
+                <textarea id="input" placeholder="Ask me anything about Python or Flask..."></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <button id="send-btn">Send</button>
+                    <div id="status" class="status-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State - store history in localStorage for persistence
+        const messages = [];
+        let promptHistory = JSON.parse(localStorage.getItem('promptHistory') || '[]');
+        let predefinedPrompts = [];
+        let isLoading = false;
+        let userPrompts = [];
+
+        // DOM Elements
+        const messagesDiv = document.getElementById('messages');
+        const historyList = document.getElementById('history-list');
+        const suggestionsList = document.getElementById('suggestions-list');
+        const input = document.getElementById('input');
+        const sendBtn = document.getElementById('send-btn');
+        const clearHistoryBtn = document.getElementById('clear-history');
+        const statusDiv = document.getElementById('status');
+        const errorContainer = document.getElementById('error-container');
+
+        // Check server health
+        async function checkServerHealth() {
+            try {
+                const response = await fetch('http://localhost:5000/health');
+                const data = await response.json();
+
+                // Log the full response for debugging
+                console.log('Health check response:', data);
+
+                // Check if Ollama service is working, regardless of database status
+                if (data.ollama && data.ollama.status === 'ok') {
+                    // Ollama is working, which is what we primarily care about
+                    if (data.ollama.primary_model_available) {
+                        statusDiv.textContent = 'Server: Connected';
+                        statusDiv.style.color = '#4caf50';
+                    } else {
+                        statusDiv.textContent = 'Server: Model Issues';
+                        statusDiv.style.color = '#ff9800';
+                        showError(`Primary model not available. Using alternative model if available.`);
+                    }
+
+                    // Show database warning if there's an issue, but don't block operation
+                    if (data.database && data.database.startsWith('error')) {
+                        console.warn('Database issue:', data.database);
+                        // We could display a minor warning here, but it's not critical
+                    }
+
+                    return true; // Server is functional for our main purpose
+                } else {
+                    // Ollama service has issues
+                    statusDiv.textContent = 'Server: Ollama Issues';
+                    statusDiv.style.color = '#ff9800';
+                    showError(`Ollama service issues: ${data.ollama?.message || 'Check if Ollama is running'}`);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Health check error:', error);
+                statusDiv.textContent = 'Server: Disconnected';
+                statusDiv.style.color = '#f44336';
+                showError('Cannot connect to server. Please check if the Flask application is running.');
+                return false;
+            }
+        }
+
+        // Fetch prompts from server
+        async function fetchPrompts() {
+            try {
+                const response = await fetch('http://localhost:5000/prompts');
+                const data = await response.json();
+
+                predefinedPrompts = data.predefined_prompts || [];
+                userPrompts = data.user_prompts || [];
+
+                // Merge server prompts with local history but maintain our local history
+                // We don't reset promptHistory to keep what's in localStorage
+                userPrompts.forEach(prompt => {
+                    if (!promptHistory.includes(prompt.text)) {
+                        promptHistory.push(prompt.text);
+                    }
+                });
+
+                // Save to localStorage
+                localStorage.setItem('promptHistory', JSON.stringify(promptHistory));
+
+                renderSuggestions();
+                renderHistory();
+            } catch (error) {
+                console.error('Error fetching prompts:', error);
+                predefinedPrompts = ['Error loading suggestions'];
+                renderSuggestions();
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+            setTimeout(() => {
+                errorContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        // Render messages
+        function renderMessages() {
+            messagesDiv.innerHTML = '';
+            messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `message ${msg.sender === 'user' ? 'user-message' : 'assistant-message'}`;
+
+                if (msg.sender === 'assistant') {
+                    div.innerHTML = formatResponse(msg.text);
+                } else {
+                    div.textContent = msg.text;
+                }
+
+                messagesDiv.appendChild(div);
+            });
+
+            if (isLoading) {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'message assistant-message loading-indicator';
+                loadingDiv.innerHTML = 'Thinking <div class="loading-dots"><span></span><span></span><span></span></div>';
+                messagesDiv.appendChild(loadingDiv);
+            }
+
+            // Auto-scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Truncate text to a specified length
+        function truncateText(text, maxLength = 50) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength - 3) + '...';
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHTML(html) {
+            const div = document.createElement('div');
+            div.textContent = html;
+            return div.innerHTML;
+        }
+
+        // Render prompt history
+        function renderHistory() {
+            if (promptHistory.length === 0) {
+                historyList.innerHTML = '<p>No history yet</p>';
+                return;
+            }
+
+            historyList.innerHTML = '';
+
+            // Show most recent prompts first (up to 10)
+            const recentPrompts = [...promptHistory].reverse().slice(0, 10);
+
+            recentPrompts.forEach(prompt => {
+                const div = document.createElement('div');
+                div.className = 'suggestion';
+                div.textContent = truncateText(prompt);
+                div.title = prompt;
+                div.onclick = () => useSuggestion(prompt);
+                historyList.appendChild(div);
+            });
+        }
+
+        // Render predefined suggestions
+        function renderSuggestions() {
+            suggestionsList.innerHTML = '';
+
+            predefinedPrompts.forEach(prompt => {
+                const div = document.createElement('div');
+                div.className = 'suggestion';
+                div.textContent = truncateText(prompt);
+                div.title = prompt;
+                div.onclick = () => useSuggestion(prompt);
+                suggestionsList.appendChild(div);
+            });
+        }
+
+        // Improved Markdown formatting
+        // Improved Markdown formatting
+        function formatResponse(text) {
+            if (!text) return '';
+
+            // First escape any HTML
+            let safeText = escapeHTML(text);
+
+            // Replace triple backtick code blocks - this needs to come first
+            safeText = safeText.replace(/```([a-z]*)\n([\s\S]*?)```/g, function (match, language, codeContent) {
+                return '<pre class="code-block"><code>' + codeContent.trim() + '</code></pre>';
+            });
+
+            // Replace inline code - this needs to come after code blocks
+            safeText = safeText.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            // Replace headers
+            safeText = safeText.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+            safeText = safeText.replace(/^#### (.*?)$/gm, '<h4>$1</h4>');
+            safeText = safeText.replace(/^##### (.*?)$/gm, '<h5>$1</h5>');
+
+            // Replace bold text
+            safeText = safeText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+            // Replace italic text (make sure not to match already processed bold)
+            safeText = safeText.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+
+            // Replace numbered lists
+            safeText = safeText.replace(/^\d+\. (.*?)$/gm, '<li>$1</li>');
+
+            // Replace bullet points
+            safeText = safeText.replace(/^- (.*?)$/gm, '<li>$1</li>');
+
+            // Wrap lists
+            safeText = safeText.replace(/(<li>.*?<\/li>)\n(<li>)/g, '$1$2');
+            safeText = safeText.replace(/(<li>.*?<\/li>)(?!\n<li>)/g, '<ul>$1</ul>');
+
+            // Handle paragraphs - double newlines indicate paragraph breaks
+            safeText = safeText.replace(/\n\n(?!\<)/g, '</p><p>');
+
+            // Replace single newlines with <br> only if not before or after a block element
+            safeText = safeText.replace(/([^>])\n(?!<)/g, '$1<br>');
+
+            // Wrap content in paragraphs if not already wrapped in block-level tags
+            if (!safeText.startsWith('<h') && !safeText.startsWith('<ul') && !safeText.startsWith('<p')) {
+                safeText = '<p>' + safeText + '</p>';
+            }
+
+            // Close any paragraph that might not be closed
+            if (!safeText.endsWith('</p>') && !safeText.endsWith('</h3>') && !safeText.endsWith('</h4>') && !safeText.endsWith('</ul>')) {
+                safeText = safeText + '</p>';
+            }
+
+            return safeText;
+        }
+
+        // Clear all user prompt history
+        async function clearHistory() {
+            try {
+                const response = await fetch('http://localhost:5000/clear-prompts', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    promptHistory = [];
+                    localStorage.removeItem('promptHistory');
+                    renderHistory();
+                    statusDiv.textContent = `Cleared ${data.deleted_count} prompts`;
+                } else {
+                    showError(`Failed to clear history: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error clearing history:', error);
+                showError('Failed to clear history');
+            }
+        }
+
+        // Handle sending a prompt
+        async function submitPrompt() {
+            const userInput = input.value.trim();
+            if (!userInput || isLoading) return;
+
+            // Check server health before sending
+            const serverOk = await checkServerHealth();
+            if (!serverOk) {
+                showError('Cannot send message: Server unavailable');
+                return;
+            }
+
+            messages.push({ sender: 'user', text: userInput });
+
+            // Add to history if not already there
+            if (!promptHistory.includes(userInput)) {
+                promptHistory.push(userInput);
+                // Save to localStorage
+                localStorage.setItem('promptHistory', JSON.stringify(promptHistory));
+                renderHistory();
+            }
+
+            input.value = '';
+            isLoading = true;
+            sendBtn.disabled = true;
+            renderMessages();
+
+            try {
+                const response = await fetch('http://localhost:5000/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userInput })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Server error');
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    messages.push({
+                        sender: 'assistant',
+                        text: `Error: ${data.error}. Please try again or use a different prompt.`
+                    });
+                } else {
+                    const assistantResponse = data.response || 'No response from assistant';
+                    messages.push({ sender: 'assistant', text: assistantResponse });
+
+                    // If a note is included (e.g., fallback model was used)
+                    if (data.note) {
+                        statusDiv.textContent = data.note;
+                        setTimeout(() => { statusDiv.textContent = 'Server: Connected'; }, 5000);
+                    }
+                }
+
+                // Fetch prompts but don't reset our local history
+                await fetchPrompts();
+
+            } catch (error) {
+                console.error('Error:', error);
+                messages.push({
+                    sender: 'assistant',
+                    text: `Error: ${error.message || 'Connection to server failed'}`
+                });
+                showError(`Failed to get response: ${error.message}`);
+            } finally {
+                isLoading = false;
+                sendBtn.disabled = false;
+                renderMessages();
+            }
+        }
+
+        // Use a suggestion
+        function useSuggestion(prompt) {
+            input.value = prompt;
+            input.focus();
+        }
+
+        // Event listeners
+        sendBtn.addEventListener('click', submitPrompt);
+
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitPrompt();
+            }
+        });
+
+        input.addEventListener('input', () => {
+            sendBtn.disabled = isLoading || !input.value.trim();
+        });
+
+        clearHistoryBtn.addEventListener('click', clearHistory);
+
+        // Initialize
+        async function initialize() {
+            await checkServerHealth();
+            await fetchPrompts();
+            renderMessages();
+            renderHistory(); // Make sure history renders even if server fetch fails
+            sendBtn.disabled = true; // Disable send button until input is provided
+
+            // Set focus to input
+            input.focus();
+        }
+
+        // Start the app
+        initialize();
+    </script>
+</body>
+
+</html>

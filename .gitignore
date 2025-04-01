@@ -1,0 +1,51 @@
+# Virtual environment
+venv/
+.env
+*.env
+*.venv
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs and databases
+logs/
+*.log
+*.sqlite3
+*.db
+instance/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Bytecode files
+*.swp
+*.swo
+
+# VS Code settings
+.vscode/
+
+# PyCharm settings
+.idea/
+
+# Git files
+*.bak
+*.orig
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Coverage reports
+.coverage
+htmlcov/
+
+# Compiled C extensions
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
